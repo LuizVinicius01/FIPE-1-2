@@ -6,10 +6,9 @@ import time
 from datetime import date
 import traceback
 import urllib
-from pathlib import Path  # Para salvar dinamicamente na pasta Downloads
+from pathlib import Path
 
 def get_sql_server_connection_str():
-    """Retorna a string de conexão com o banco de dados SQL Server."""
     user = 'rpa_bi'
     password = 'Rp@_B&_P@rvi'
     host = '10.0.10.243'
@@ -50,13 +49,24 @@ def FIPE():
     try:
         conn_str = get_sql_server_connection_str()
         engine = create_engine(conn_str)
-        
-        inicio_query = time.time()
-        query = "SELECT DISTINCT CAST(Fipe_Id AS VARCHAR(MAX)) AS Fipe_Id FROM [stage].[camada0].[AutoAvaliar_AvaliacoesTotais]"
-        df_fipe = pd.read_sql(query, engine)
-        print(f"Tempo para carregar dados do banco com DISTINCT: {time.time() - inicio_query:.2f} segundos")
-        
-        lista_fipes = df_fipe['Fipe_Id'].dropna().tolist()
+
+        # Caminho fixo para a pasta Downloads do usuário
+        downloads_path = Path("C:/Users/adm.luiz.vinicius/Downloads")
+        txt_path = downloads_path / "codigos_falharam.txt"
+
+        # Verifica se o arquivo de falha existe — se sim, lê dele
+        if txt_path.exists():
+            print(f"Lendo códigos do arquivo: {txt_path}")
+            with open(txt_path, "r", encoding="utf-8") as f:
+                lista_fipes = [linha.strip() for linha in f if linha.strip()]
+        else:
+            # Se não existe o txt, pega os dados do banco normalmente
+            print("Arquivo não encontrado. Carregando códigos FIPE do banco de dados...")
+            inicio_query = time.time()
+            query = "SELECT DISTINCT CAST(Fipe_Id AS VARCHAR(MAX)) AS Fipe_Id FROM [stage].[camada0].[AutoAvaliar_AvaliacoesTotais]"
+            df_fipe = pd.read_sql(query, engine)
+            print(f"Tempo para carregar dados do banco com DISTINCT: {time.time() - inicio_query:.2f} segundos")
+            lista_fipes = df_fipe['Fipe_Id'].dropna().tolist()
         
         inicio_api = time.time()
         resultados_finais = []
@@ -90,17 +100,11 @@ def FIPE():
         if codigos_falharam:
             codigos_validos = [codigo for codigo in codigos_falharam if isinstance(codigo, str) and codigo.strip()]
             if codigos_validos:
-                print("Códigos que falharam na primeira tentativa:")
+                print("Códigos que falharam novamente:")
                 print(codigos_validos)
-
-                # ✅ Salvar arquivo na pasta Downloads do usuário atual
-                downloads_path = Path.home() / "Downloads"
-                file_path = downloads_path / "codigos_falharam.txt"
-
-                with open(file_path, "w", encoding="utf-8") as file:
+                with open(txt_path, "w", encoding="utf-8") as file:
                     file.write("\n".join(codigos_validos))
-
-                print(f"Arquivo salvo em: {file_path}")
+                print(f"Arquivo de falhas atualizado em: {txt_path}")
             else:
                 print("Nenhum código válido para salvar.")
     except Exception:
