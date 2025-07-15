@@ -18,7 +18,7 @@ pipeline {
         stage('Executar script Python') {
             steps {
                 bat '''
-            C:\\Users\\adm.luiz.vinicius\\AppData\\Local\\Programs\\Python\\Python312\\python.exe Fipe 2-2.py > script_log.txt 2>&1
+            C:\\Users\\adm.luiz.vinicius\\AppData\\Local\\Programs\\Python\\Python312\\python.exe Fipe2-2.py > script_log.txt 2>&1
             type script_log.txt
         '''
     }
